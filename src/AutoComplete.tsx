@@ -5,52 +5,72 @@ import Wrapper from './Wrapper';
 import Trie from "./trie";
 
 export interface AutoCompleteProps {
-  className?: string;
-  list:[];
-  getPropValue? : Function;
+  list: [];
+  getPropValue?: Function;
   handleHighlight?: Function;
   handleSelect?: Function;
-  showAll?: boolean;
-  descending?: boolean;
-  clearOnSubmit?: boolean;
-  highlightFirstItem?: boolean;
+  handleNewValue?: Function;
+  inputProps?: object;
   isOpen?: boolean;
   updateIsOpen?: Function;
-  
+  disableOutsideClick?: boolean;
+  highlightFirstItem?: boolean;
+  showAll?: boolean;
+  descending?: boolean;
   clearOnSelect?: boolean;
-  handleNewValue?: Function;
   submit?: boolean;
   updateSubmit?: Function;
   handleSubmit?: Function;
-  disableOutsideClick?: boolean;
+  clearOnSubmit?: boolean;
   wrapperStyle?: object;
-  inputProps?: object;
   inputStyle?: object;
   dropDownStyle?: object;
   listItemStyle?: object;
   highlightedItemStyle?: object;
 }
 
+export interface MatchingItemsProps {
+  originalIndex: number,
+  value: string,
+}
+
+export enum Actions {
+  OPEN = 'OPEN',
+  CLOSE = 'CLOSE',
+  DOWN = 'DOWN',
+  UP = 'UP',
+  UPDATE = 'UPDATE'
+}
+
+export interface StateTypes {
+  matchingItems: MatchingItemsProps[],
+  highlightedIndex: number
+}
+
+export interface StateActions {
+  type: Actions,
+  payload: any
+}
+
 export default function AutoComplete({
-  list = [] ,
-  getPropValue = () => {},
-  handleHighlight = () => {},
-  handleSelect = () => {},
-  descending = false,
-  clearOnSubmit = true,
-  highlightFirstItem = true,
-  isOpen,
-  updateIsOpen = () => {},
-  showAll = false,
-  handleNewValue = () => {},
-  submit,
-  updateSubmit = () => {},
-  handleSubmit = () => {},
-  
-  clearOnSelect = handleSelect ? true : false,
-  disableOutsideClick = false,
-  wrapperStyle = {},
+  list = [],
+  getPropValue = () => { },
+  handleHighlight = () => { },
+  handleSelect = () => { },
+  handleNewValue = () => { },
   inputProps,
+  isOpen,
+  updateIsOpen = () => { },
+  disableOutsideClick = false,
+  highlightFirstItem = true,
+  showAll = false,
+  descending = false,
+  clearOnSelect = handleSelect ? true : false,
+  submit,
+  updateSubmit = () => { },
+  handleSubmit = () => { },
+  clearOnSubmit = true,
+  wrapperStyle = {},
   inputStyle,
   dropDownStyle,
   listItemStyle,
@@ -58,30 +78,30 @@ export default function AutoComplete({
     backgroundColor: "dodgerBlue"
   }
 }: AutoCompleteProps) {
-  
+
   const getPropValueRef = useRef<Function>();
   const updateRef = useRef<Function>(updateIsOpen);
   const submitRef = useRef<Function>();
-  const matchingItemsRef = useRef<any[]>([]);
+  const matchingItemsRef = useRef<MatchingItemsProps[]>([]);
   const trie = useRef<any>();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropDownRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<any[]>([]);
   const [savedList, setSavedList] = useState<any[]>([]);
+  const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [savedFunction, setSavedFunction] = useState<string>();
   const initialState = {
-    filteredItems: [],
     matchingItems: [],
     highlightedIndex: highlightFirstItem ? 0 : -1
   };
 
-  const reducer = (state: any, action: any) => {
+  const reducer = (state: StateTypes, action: StateActions) => {
     switch (action.type) {
       case "OPEN": {
         matchingItemsRef.current = action.payload
         return ({
           ...state,
-          matchingItems: action.payload,
+          matchingItems: action.payload
         })
       }
       case "CLOSE": {
@@ -89,13 +109,13 @@ export default function AutoComplete({
         if (highlightFirstItem === false) {
           return ({
             ...state,
-            matchingItems: [],
+            matchingItems: action.payload,
             highlightedIndex: -1
           })
         } else {
           return ({
             ...state,
-            matchingItems: [],
+            matchingItems: action.payload,
             highlightedIndex: 0
           })
         }
@@ -103,13 +123,13 @@ export default function AutoComplete({
       case "DOWN": {
         return ({
           ...state,
-          highlightedIndex: state.highlightedIndex + 1
+          highlightedIndex: state.highlightedIndex + action.payload
         })
       }
       case "UP": {
         return ({
           ...state,
-          highlightedIndex: state.highlightedIndex - 1
+          highlightedIndex: state.highlightedIndex - action.payload
         })
       }
       case "UPDATE": {
@@ -118,19 +138,13 @@ export default function AutoComplete({
           highlightedIndex: action.payload
         })
       }
-      case "FILTER": {
-        return ({
-          ...state,
-          filteredItems: action.payload
-        })
-      }
       default:
         return state;
     }
   };
 
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { filteredItems, matchingItems, highlightedIndex } = state;
+  const { matchingItems, highlightedIndex } = state;
 
   // If `list` is new - store it in the `savedList` state
   if (!isEqual(list, savedList)) {
@@ -153,7 +167,7 @@ export default function AutoComplete({
       if (savedList.some(value => { return typeof value == "object" })) {
         if (getPropValueRef.current) {
           try {
-            dispatch({ type: "FILTER", payload: getPropValueRef.current(savedList) })
+            setFilteredItems(getPropValueRef.current(savedList))
           } catch (error) {
             console.error("Check the getPropValue function : the property value doesn't seem to exist", '\n', error)
           };
@@ -162,7 +176,7 @@ export default function AutoComplete({
           return
         }
       } else {
-        dispatch({ type: "FILTER", payload: savedList })
+        setFilteredItems(savedList)
       }
     } else if (savedList === undefined) {
       return
@@ -191,7 +205,7 @@ export default function AutoComplete({
   // Allows user to toggle property values in dropdown while its open
   useEffect(() => {
     if (matchingItemsRef.current.length) {
-      dispatch({ type: "OPEN", payload: filteredItems.map((item: any, index: number) => ({ value: item, originalIndex: index })) });
+      dispatch({ type: Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => ({ value: item, originalIndex: index })) });
     }
   }, [filteredItems])
 
@@ -200,17 +214,17 @@ export default function AutoComplete({
   // it sends the updated state of `isOpen` back to the parent
   useEffect(() => {
     if (updateRef.current && !isOpen) {
-      dispatch({ type: "CLOSE" });
+      dispatch({ type: Actions.CLOSE, payload: [] });
     } else if (updateRef.current && isOpen) {
       if (inputRef.current) { inputRef.current.focus() }
       if (showAll && !inputRef.current?.value) {
         if (filteredItems) {
-          dispatch({ type: "OPEN", payload: filteredItems.map((item: any, index: number) => ({ value: item, originalIndex: index })) });
+          dispatch({ type: Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => ({ value: item, originalIndex: index })) });
         }
       } else if (showAll && inputRef.current?.value) {
-        dispatch({ type: "OPEN", payload: trie.current.find(inputRef.current.value) });
+        dispatch({ type: Actions.OPEN, payload: trie.current.find(inputRef.current.value) });
       } else if (!showAll && inputRef.current?.value) {
-        dispatch({ type: "OPEN", payload: trie.current.find(inputRef.current.value) });
+        dispatch({ type: Actions.OPEN, payload: trie.current.find(inputRef.current.value) });
       }
     };
   }, [isOpen, showAll, filteredItems])
@@ -228,7 +242,7 @@ export default function AutoComplete({
   submitRef.current = () => {
     let match = trie.current.contains(inputRef.current?.value);
     if (match) {
-      handleSubmit(list[match.originalIndex], match.originalIndex)
+      handleSubmit(list[match.originalIndex])
     } else if (handleNewValue) {
       handleNewValue(inputRef.current?.value.toString())
     } else {
@@ -248,14 +262,14 @@ export default function AutoComplete({
 
   // Handles text input and if `showAll` is true it opens the dropdown when input is focused
   // Runs the trie's `find` method to search for words that match the text input
-  const handlePrefix = (event: { target: { value: any; }; }) => {
+  const handlePrefix = (event: { target: { value: string; }; }) => {
     const prefix = event.target.value
     if (!highlightFirstItem) {
-      dispatch({ type: "UPDATE", payload: -1 });
+      dispatch({ type: Actions.UPDATE, payload: 1 });
     }
     if (filteredItems && showAll && prefix.length === 0) {
       dispatch({
-        type: "OPEN", payload: filteredItems.map((item: any, index: number) => (
+        type:  Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => (
           {
             value: item,
             originalIndex: index
@@ -266,14 +280,14 @@ export default function AutoComplete({
       return
     }
     if (prefix.length > 0) {
-      dispatch({ type: "OPEN", payload: trie.current.find(event.target.value) });
+      dispatch({ type: Actions.OPEN, payload: trie.current.find(event.target.value) });
       handleUpdateIsOpen(true)
     } else if (matchingItems.length) {
-      dispatch({ type: "CLOSE" });
+      dispatch({ type: Actions.CLOSE, payload: [] });
       handleUpdateIsOpen(false)
     }
     if (highlightedIndex + 1 > matchingItems.length) {
-      dispatch({ type: "UPDATE", payload: 0 });
+      dispatch({ type: Actions.UPDATE, payload: 0 });
     }
   };
 
@@ -284,7 +298,7 @@ export default function AutoComplete({
     if (e.keyCode === 40 && matchingItems.length) {
       e.preventDefault()
       if (!itemsRef.current[highlightedIndex + 1]) {
-        dispatch({ type: "UPDATE", payload: 0 });
+        dispatch({ type: Actions.UPDATE, payload: 0 });
         scrollIntoView(
           itemsRef.current[0],
           dropDownRef.current,
@@ -292,7 +306,7 @@ export default function AutoComplete({
         )
       }
       if (itemsRef.current[highlightedIndex + 1]) {
-        dispatch({ type: "DOWN" });
+        dispatch({ type: Actions.DOWN, payload: 1 });
         scrollIntoView(
           itemsRef.current[highlightedIndex + 1],
           dropDownRef.current,
@@ -306,7 +320,7 @@ export default function AutoComplete({
     if (e.keyCode === 38) {
       e.preventDefault()
       if (itemsRef.current[highlightedIndex - 1]) {
-        dispatch({ type: "UP" });
+        dispatch({ type: Actions.UP, payload: 1 });
         scrollIntoView(
           itemsRef.current[highlightedIndex - 1],
           dropDownRef.current,
@@ -335,7 +349,7 @@ export default function AutoComplete({
             console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
           }
         }
-        dispatch({ type: "CLOSE" });
+        dispatch({ type: Actions.CLOSE, payload: [] });
         resetInputValue(matchingItems[highlightedIndex].value)
       } else {
         if (inputRef.current?.value) {
@@ -353,7 +367,7 @@ export default function AutoComplete({
           } catch (error) {
             console.error("MISSING PROP: You must provide a valid function to the 'onSelect' prop", '\n', error)
           } finally {
-            dispatch({ type: "CLOSE" });
+            dispatch({ type: Actions.CLOSE, payload: [] });
             resetInputValue(inputRef.current.value)
           }
         }
@@ -361,7 +375,7 @@ export default function AutoComplete({
     }
     // Tab key takes focus off the input and closes the dropdown 
     if (e.keyCode === 9) {
-      dispatch({ type: "CLOSE" });
+      dispatch({ type: Actions.CLOSE, payload: [] });
       handleUpdateIsOpen(false)
     }
   }
@@ -370,7 +384,7 @@ export default function AutoComplete({
   // the highlighted item's original `string` or `object`, it's `HTMLelement`, and it's index from the original list
   // If there is not a highlighted item it will pass the input's value into the 'onSelect' function
   // Then closes the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input or not
-  const onMouseClick = (index: number, selectedElement: any, matchingItem: any) => {
+  const onMouseClick = (index: number, selectedElement: HTMLDivElement, matchingItem: string) => {
     if (handleSelect) {
       try {
         handleSelect(list[index], selectedElement)
@@ -378,7 +392,7 @@ export default function AutoComplete({
         console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
       }
     }
-    dispatch({ type: "CLOSE" });
+    dispatch({ type: Actions.CLOSE, payload: [] });
     resetInputValue(matchingItem);
   }
 
@@ -392,7 +406,7 @@ export default function AutoComplete({
       let height = Math.round(dropDownRef.current?.getBoundingClientRect().height)
       let bottom = containerTop + height
       if (containerTop > itemTop) {
-        dispatch({ type: "DOWN" });
+        dispatch({ type: Actions.DOWN, payload: 1 });
         scrollIntoView(
           itemsRef.current[highlightedIndex],
           dropDownRef.current,
@@ -403,7 +417,7 @@ export default function AutoComplete({
         )
       }
       if (bottom < itemTop + (itemHeight / 1.2)) {
-        dispatch({ type: "UP" });
+        dispatch({ type: Actions.UP, payload: 1 });
         scrollIntoView(
           itemsRef.current[highlightedIndex],
           dropDownRef.current,
@@ -426,9 +440,9 @@ export default function AutoComplete({
     }
   });
 
-  const dropDownList = sorted.map((matchingItem: any, index: number) => {
+  const dropDownList = sorted.map((matchingItem: MatchingItemsProps, index: number) => {
     if (highlightedIndex + 1 > matchingItems.length) {
-      dispatch({ type: "UPDATE", payload: 0 });
+      dispatch({ type: Actions.UPDATE, payload: 0 });
     }
     return (
       matchingItem.value !== undefined ?
@@ -438,7 +452,7 @@ export default function AutoComplete({
           className={highlightedIndex === index ? "dropdown-item highlited-item" : "dropdown-item"}
           style={highlightedIndex === index ? { ...highlightedItemStyle, ...listItemStyle } : { ...listItemStyle }}
           onClick={() => onMouseClick(matchingItem.originalIndex, itemsRef.current[index], matchingItem.value)}
-          onMouseEnter={() => dispatch({ type: "UPDATE", payload: index })}
+          onMouseEnter={() => dispatch({ type: Actions.UPDATE, payload: index })}
         >
           {matchingItem.value}
         </div>
@@ -453,7 +467,7 @@ export default function AutoComplete({
       wrapperStyle={wrapperStyle}
       onOutsideClick={() => {
         if (matchingItems.length) {
-          dispatch({ type: "CLOSE" });
+          dispatch({ type: Actions.CLOSE, payload: [] });
         }
         handleUpdateIsOpen(false)
       }}>
@@ -488,19 +502,19 @@ export default function AutoComplete({
   // When handleSelect runs it will clear the input if 'clearOnSelect' is set to true
   // If clearOnSelect is set to false it will set the input value to the word passed in
   function resetInputValue(matchingItem: string) {
-    if(inputRef.current){
-    if (clearOnSelect) {
-      inputRef.current.value = "";
-    } else {
-      if (!matchingItem) {
-        inputRef.current.value = ""
+    if (inputRef.current) {
+      if (clearOnSelect) {
+        inputRef.current.value = "";
       } else {
-        inputRef.current.value = matchingItem;
-        inputRef.current.focus()
-        dispatch({ type: "CLOSE" });
+        if (!matchingItem) {
+          inputRef.current.value = ""
+        } else {
+          inputRef.current.value = matchingItem;
+          inputRef.current.focus()
+          dispatch({ type: Actions.CLOSE, payload: [] });
+        }
       }
     }
-  }
     handleUpdateIsOpen(false)
   }
 
@@ -508,19 +522,19 @@ export default function AutoComplete({
   // When handleSelect runs it will clear the input if 'clearOnSubmit' is set to true
   // If clearOnSubmit is set to false it will set the input value to the word passed in
   function resetOnSubmit(matchingItem: string | undefined) {
-    if(inputRef.current){
-    if (clearOnSubmit) {
-      inputRef.current.value = "";
-    } else {
-      if (!matchingItem) {
-        inputRef.current.value = ""
+    if (inputRef.current) {
+      if (clearOnSubmit) {
+        inputRef.current.value = "";
       } else {
-        inputRef.current.value = matchingItem;
-        inputRef.current?.focus()
-        dispatch({ type: "CLOSE" });
+        if (!matchingItem) {
+          inputRef.current.value = ""
+        } else {
+          inputRef.current.value = matchingItem;
+          inputRef.current?.focus()
+          dispatch({ type: Actions.CLOSE, payload: [] });
+        }
       }
     }
-  }
   }
 
   // Passes the state of `isOpen` back to parent when dropdown is open -

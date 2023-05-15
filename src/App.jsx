@@ -66,9 +66,9 @@ function App() {
             }
         }
         //getPropValue={logMessage}
-        handleHighlight={(item) => {
-          console.log(item)
-        }}
+        // handleHighlight={(item) => {
+        //   console.log(item)
+        // }}
         handleSelect={(item, element) => {
           console.log("handleSelect")
           console.log(element)
@@ -95,7 +95,7 @@ function App() {
         highlightedItemStyle={{
           backgroundColor: "dodgerBlue",
         }}
-        wrapperStyle={{ width: '100px' }}
+        wrapperStyle={{ width: 'fit-content' }}
         listItemStyle={{
           cursor: "pointer",
           padding: "5px"
@@ -108,7 +108,7 @@ function App() {
         }}
 
 
-        clearhandleSelect={false}
+        clearOnSelect={false}
 
 
         submit={submit}
