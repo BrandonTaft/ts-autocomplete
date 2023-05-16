@@ -69,7 +69,7 @@ export default function AutoComplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropDownRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement[]>([]);
-  const [savedList, setSavedList] = useState<string[]>([]);
+  const [savedList, setSavedList] = useState<any[]>([]);
   const [matchingItems, setMatchingItems] = useState<MatchingItemsProps[]>([]);
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [savedFunction, setSavedFunction] = useState<string>();
