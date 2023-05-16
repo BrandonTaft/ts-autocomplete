@@ -34,24 +34,6 @@ export interface MatchingItemsProps {
   value: string,
 }
 
-export enum Actions {
-  OPEN = 'OPEN',
-  CLOSE = 'CLOSE',
-  DOWN = 'DOWN',
-  UP = 'UP',
-  UPDATE = 'UPDATE'
-}
-
-export interface StateTypes {
-  matchingItems: MatchingItemsProps[],
-  highlightedIndex: number
-}
-
-export interface StateActions {
-  type: Actions,
-  payload: any
-}
-
 export default function AutoComplete({
   list = [],
   getPropValue = () => { },
@@ -86,65 +68,12 @@ export default function AutoComplete({
   const trie = useRef<any>();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropDownRef = useRef<HTMLDivElement>(null);
-  const itemsRef = useRef<any[]>([]);
-  const [savedList, setSavedList] = useState<any[]>([]);
+  const itemsRef = useRef<HTMLDivElement[]>([]);
+  const [savedList, setSavedList] = useState<string[]>([]);
+  const [matchingItems, setMatchingItems] = useState<MatchingItemsProps[]>([]);
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [savedFunction, setSavedFunction] = useState<string>();
-  const initialState = {
-    matchingItems: [],
-    highlightedIndex: highlightFirstItem ? 0 : -1
-  };
-
-  const reducer = (state: StateTypes, action: StateActions) => {
-    switch (action.type) {
-      case "OPEN": {
-        matchingItemsRef.current = action.payload
-        return ({
-          ...state,
-          matchingItems: action.payload
-        })
-      }
-      case "CLOSE": {
-        matchingItemsRef.current = []
-        if (highlightFirstItem === false) {
-          return ({
-            ...state,
-            matchingItems: action.payload,
-            highlightedIndex: -1
-          })
-        } else {
-          return ({
-            ...state,
-            matchingItems: action.payload,
-            highlightedIndex: 0
-          })
-        }
-      }
-      case "DOWN": {
-        return ({
-          ...state,
-          highlightedIndex: state.highlightedIndex + action.payload
-        })
-      }
-      case "UP": {
-        return ({
-          ...state,
-          highlightedIndex: state.highlightedIndex - action.payload
-        })
-      }
-      case "UPDATE": {
-        return ({
-          ...state,
-          highlightedIndex: action.payload
-        })
-      }
-      default:
-        return state;
-    }
-  };
-
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const { matchingItems, highlightedIndex } = state;
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(highlightFirstItem ? 0 : -1);
 
   // If `list` is new - store it in the `savedList` state
   if (!isEqual(list, savedList)) {
@@ -205,7 +134,7 @@ export default function AutoComplete({
   // Allows user to toggle property values in dropdown while its open
   useEffect(() => {
     if (matchingItemsRef.current.length) {
-      dispatch({ type: Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => ({ value: item, originalIndex: index })) });
+      setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
     }
   }, [filteredItems])
 
@@ -214,17 +143,17 @@ export default function AutoComplete({
   // it sends the updated state of `isOpen` back to the parent
   useEffect(() => {
     if (updateRef.current && !isOpen) {
-      dispatch({ type: Actions.CLOSE, payload: [] });
+      setMatchingItems([])
     } else if (updateRef.current && isOpen) {
       if (inputRef.current) { inputRef.current.focus() }
       if (showAll && !inputRef.current?.value) {
         if (filteredItems) {
-          dispatch({ type: Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => ({ value: item, originalIndex: index })) });
+          setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
         }
       } else if (showAll && inputRef.current?.value) {
-        dispatch({ type: Actions.OPEN, payload: trie.current.find(inputRef.current.value) });
+        setMatchingItems(trie.current.find(inputRef.current.value))
       } else if (!showAll && inputRef.current?.value) {
-        dispatch({ type: Actions.OPEN, payload: trie.current.find(inputRef.current.value) });
+        setMatchingItems(trie.current.find(inputRef.current.value))
       }
     };
   }, [isOpen, showAll, filteredItems])
@@ -233,7 +162,7 @@ export default function AutoComplete({
   // Passes in the higlighted element's `HTMLDivElement` & the string or object from the original list
   useEffect(() => {
     if (itemsRef.current[highlightedIndex] && handleHighlight) {
-      handleHighlight(list[matchingItems[highlightedIndex].originalIndex])
+      handleHighlight(list[matchingItems[highlightedIndex]!.originalIndex])
     }
   }, [handleHighlight, highlightedIndex, matchingItems, list])
 
@@ -265,29 +194,23 @@ export default function AutoComplete({
   const handlePrefix = (event: { target: { value: string; }; }) => {
     const prefix = event.target.value
     if (!highlightFirstItem) {
-      dispatch({ type: Actions.UPDATE, payload: 1 });
+      setHighlightedIndex(1)
     }
     if (filteredItems && showAll && prefix.length === 0) {
-      dispatch({
-        type:  Actions.OPEN, payload: filteredItems.map((item: string | number | object, index: number) => (
-          {
-            value: item,
-            originalIndex: index
-          }
-        ))
-      });
+      setMatchingItems(filteredItems.map((item, index) => ({value: item,originalIndex: index})))
       handleUpdateIsOpen(true)
       return
     }
     if (prefix.length > 0) {
-      dispatch({ type: Actions.OPEN, payload: trie.current.find(event.target.value) });
+      setMatchingItems(trie.current.find(event.target.value))
       handleUpdateIsOpen(true)
     } else if (matchingItems.length) {
-      dispatch({ type: Actions.CLOSE, payload: [] });
+  
+      setMatchingItems([])
       handleUpdateIsOpen(false)
     }
     if (highlightedIndex + 1 > matchingItems.length) {
-      dispatch({ type: Actions.UPDATE, payload: 0 });
+      setHighlightedIndex(0)
     }
   };
 
@@ -298,7 +221,7 @@ export default function AutoComplete({
     if (e.keyCode === 40 && matchingItems.length) {
       e.preventDefault()
       if (!itemsRef.current[highlightedIndex + 1]) {
-        dispatch({ type: Actions.UPDATE, payload: 0 });
+        setHighlightedIndex(0)
         scrollIntoView(
           itemsRef.current[0],
           dropDownRef.current,
@@ -306,7 +229,7 @@ export default function AutoComplete({
         )
       }
       if (itemsRef.current[highlightedIndex + 1]) {
-        dispatch({ type: Actions.DOWN, payload: 1 });
+        setHighlightedIndex(highlightedIndex + 1)
         scrollIntoView(
           itemsRef.current[highlightedIndex + 1],
           dropDownRef.current,
@@ -320,7 +243,7 @@ export default function AutoComplete({
     if (e.keyCode === 38) {
       e.preventDefault()
       if (itemsRef.current[highlightedIndex - 1]) {
-        dispatch({ type: Actions.UP, payload: 1 });
+        setHighlightedIndex(highlightedIndex - 1)
         scrollIntoView(
           itemsRef.current[highlightedIndex - 1],
           dropDownRef.current,
@@ -342,15 +265,15 @@ export default function AutoComplete({
         if (handleSelect) {
           try {
             handleSelect(
-              list[matchingItems[highlightedIndex].originalIndex],
+              list[matchingItems[highlightedIndex]!.originalIndex],
               itemsRef.current[highlightedIndex]
             )
           } catch (error) {
             console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
           }
         }
-        dispatch({ type: Actions.CLOSE, payload: [] });
-        resetInputValue(matchingItems[highlightedIndex].value)
+        setHighlightedIndex(highlightedIndex + 1)
+        resetInputValue(matchingItems[highlightedIndex]!.value)
       } else {
         if (inputRef.current?.value) {
           let match = trie.current.contains(inputRef.current?.value);
@@ -367,7 +290,7 @@ export default function AutoComplete({
           } catch (error) {
             console.error("MISSING PROP: You must provide a valid function to the 'onSelect' prop", '\n', error)
           } finally {
-            dispatch({ type: Actions.CLOSE, payload: [] });
+            setMatchingItems([]);
             resetInputValue(inputRef.current.value)
           }
         }
@@ -375,7 +298,7 @@ export default function AutoComplete({
     }
     // Tab key takes focus off the input and closes the dropdown 
     if (e.keyCode === 9) {
-      dispatch({ type: Actions.CLOSE, payload: [] });
+      setMatchingItems([]);
       handleUpdateIsOpen(false)
     }
   }
@@ -392,7 +315,7 @@ export default function AutoComplete({
         console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
       }
     }
-    dispatch({ type: Actions.CLOSE, payload: [] });
+    setMatchingItems([]);
     resetInputValue(matchingItem);
   }
 
@@ -400,13 +323,13 @@ export default function AutoComplete({
   // to keep the highlight inside the dropdown by moving the `highlightedIndex` up or down accordingly
   const scrollMe = () => {
     if (itemsRef.current[highlightedIndex] && dropDownRef.current) {
-      let itemHeight = itemsRef.current[highlightedIndex].getBoundingClientRect().height
+      let itemHeight = itemsRef.current[highlightedIndex]!.getBoundingClientRect().height
       let containerTop = Math.round(dropDownRef.current.getBoundingClientRect().top)
-      let itemTop = Math.round(itemsRef.current[highlightedIndex].getBoundingClientRect().top)
+      let itemTop = Math.round(itemsRef.current[highlightedIndex]!.getBoundingClientRect().top)
       let height = Math.round(dropDownRef.current?.getBoundingClientRect().height)
       let bottom = containerTop + height
       if (containerTop > itemTop) {
-        dispatch({ type: Actions.DOWN, payload: 1 });
+        setHighlightedIndex(highlightedIndex + 1)
         scrollIntoView(
           itemsRef.current[highlightedIndex],
           dropDownRef.current,
@@ -417,7 +340,7 @@ export default function AutoComplete({
         )
       }
       if (bottom < itemTop + (itemHeight / 1.2)) {
-        dispatch({ type: Actions.UP, payload: 1 });
+        setHighlightedIndex(highlightedIndex - 1)
         scrollIntoView(
           itemsRef.current[highlightedIndex],
           dropDownRef.current,
@@ -440,22 +363,26 @@ export default function AutoComplete({
     }
   });
 
+  
+  console.log(itemsRef.current)
   const dropDownList = sorted.map((matchingItem: MatchingItemsProps, index: number) => {
     if (highlightedIndex + 1 > matchingItems.length) {
-      dispatch({ type: Actions.UPDATE, payload: 0 });
+      setHighlightedIndex(0)
     }
+    itemsRef.current = []
     return (
-      matchingItem.value !== undefined ?
+      matchingItem.value !== undefined && itemsRef.current[index] !== null ?
         <div
           key={matchingItem.originalIndex}
-          ref={el => itemsRef.current[index] = el}
+          ref={el => itemsRef.current[index] = el!}
           className={highlightedIndex === index ? "dropdown-item highlited-item" : "dropdown-item"}
           style={highlightedIndex === index ? { ...highlightedItemStyle, ...listItemStyle } : { ...listItemStyle }}
-          onClick={() => onMouseClick(matchingItem.originalIndex, itemsRef.current[index], matchingItem.value)}
-          onMouseEnter={() => dispatch({ type: Actions.UPDATE, payload: index })}
+          onClick={() => onMouseClick(matchingItem.originalIndex, itemsRef.current[index]!, matchingItem.value)}
+          onMouseEnter={() => setHighlightedIndex(index) }
         >
           {matchingItem.value}
         </div>
+        // : itemsRef.current.slice(0, index).concat(itemsRef.current.slice(index+1))
         : null
     )
   })
@@ -467,7 +394,7 @@ export default function AutoComplete({
       wrapperStyle={wrapperStyle}
       onOutsideClick={() => {
         if (matchingItems.length) {
-          dispatch({ type: Actions.CLOSE, payload: [] });
+          setMatchingItems([]);
         }
         handleUpdateIsOpen(false)
       }}>
@@ -511,7 +438,7 @@ export default function AutoComplete({
         } else {
           inputRef.current.value = matchingItem;
           inputRef.current.focus()
-          dispatch({ type: Actions.CLOSE, payload: [] });
+          setMatchingItems([]);
         }
       }
     }
@@ -531,7 +458,7 @@ export default function AutoComplete({
         } else {
           inputRef.current.value = matchingItem;
           inputRef.current?.focus()
-          dispatch({ type: Actions.CLOSE, payload: [] });
+          setMatchingItems([]);
         }
       }
     }
@@ -544,5 +471,4 @@ export default function AutoComplete({
       updateIsOpen(isItOpen)
     }
   }
-
 }
