@@ -8,6 +8,7 @@ function App() {
   const [openDropDown, setOpenDropDown] = useState();
   const [filter, setFilter] = useState(true);
   const [sort, setSort] = useState(false);
+  const [newList, setNewList] = useState(testData);
   const toggleDropDown = (() => {
     setOpenDropDown(openDropDown ? false : true)
   })
@@ -21,12 +22,33 @@ function App() {
     setSubmit(true)
   })
   const toggleList = (() => {
-    setNewList(newList === testData ? a : testData)
+    setNewList(testData ? a : testData)
   })
 
-  const [newList, setNewList] = useState(testData);
+  const x = [{
+    "id": "488f3c2a-8140-4b08-abd0-f600b5f2b85a"
+  },
+  {
+    "id": "4fc4e79c-5f83-4560-aa15-ce289e59177b"
+  },
+  {
+    "id": "2e59d604-a42a-422a-a722-0b775f44d27c"
+  },
+  {
+    "name": "4fc4e"
+  },
+  {
+    "name": "2e59d"
+  },
+  {
+    "id": "488f3",
+    "name": "John Doe",
+    "age": 28
+  }]
   let a = [0, 33, 1, 55, 5, 111, 11, 333, 44]
 
+  
+  
   const logMessage = (message) => {
     return (message.map((listItem) => listItem.id));
   };
@@ -43,8 +65,8 @@ function App() {
       <AutoComplete
         test={logMessage}
         //list={[0, 33, 1, 55, 5, 111, 11, 333, 44]}
+        //list={newList}
         list={newList}
-        //list={newList ? testData : a}
         //list={testData}
 
         getPropValue={
@@ -76,7 +98,7 @@ function App() {
         }}
         handleNewValue={(value) => {
           console.log("HANDLE NEW VALUE")
-          setNewList(oldList => [...oldList, {name:value}])
+          setNewList(newList => [...newList, {name:value}])
         }}
         handleSubmit={(selectedItem) => {
           console.log("HANDLE SUBMIT")

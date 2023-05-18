@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { CSSProperties, useEffect, useRef } from "react";
 
 export interface WrapperProps {
     children : any;
     onOutsideClick: Function;
     disabled: boolean;
-    wrapperStyle: object;
+    wrapperStyle: CSSProperties;
     className: string;
 }
 

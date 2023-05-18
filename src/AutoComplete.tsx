@@ -1,18 +1,18 @@
-import { useEffect, useState, useRef, useReducer } from "react";
+import { useEffect, useState, useRef, useReducer, HTMLAttributes, CSSProperties } from "react";
 import scrollIntoView from 'dom-scroll-into-view';
 import isEqual from "lodash.isequal";
 import Wrapper from './Wrapper';
 import Trie from "./trie";
 
-export interface AutoCompleteProps {
+export interface AutoCompleteProps{
   list: [];
-  getPropValue?: Function;
-  handleHighlight?: Function;
-  handleSelect?: Function;
-  handleNewValue?: Function;
-  inputProps?: object;
+  getPropValue?: (list: []) => {};
+  handleHighlight?: (item: any) => {};
+  handleSelect?: (item: any , options?: {element? : HTMLDivElement}) => {};
+  handleNewValue?: (item: string) => {};
+  inputProps?: {};
   isOpen?: boolean;
-  updateIsOpen?: Function;
+  updateIsOpen?: (open: boolean) => {};
   disableOutsideClick?: boolean;
   highlightFirstItem?: boolean;
   showAll?: boolean;
@@ -22,11 +22,11 @@ export interface AutoCompleteProps {
   updateSubmit?: Function;
   handleSubmit?: Function;
   clearOnSubmit?: boolean;
-  wrapperStyle?: object;
-  inputStyle?: object;
-  dropDownStyle?: object;
-  listItemStyle?: object;
-  highlightedItemStyle?: object;
+  wrapperStyle:  CSSProperties;
+  inputStyle: CSSProperties;
+  dropDownStyle:  CSSProperties;
+  listItemStyle:  CSSProperties;
+  highlightedItemStyle:  CSSProperties;
 }
 
 export interface MatchingItemsProps {
@@ -34,15 +34,27 @@ export interface MatchingItemsProps {
   value: string,
 }
 
+export interface TrieProps {
+  insert: Function,
+  find: Function,
+  contains: Function,
+}
+
+export interface SelectParams {
+  message: string;
+  title?: string;
+  autoHideAfter?: number;
+}
+
 export default function AutoComplete({
   list = [],
-  getPropValue = () => { },
-  handleHighlight = () => { },
-  handleSelect = () => { },
-  handleNewValue = () => { },
+  getPropValue,
+  handleHighlight,
+  handleSelect,
+  handleNewValue,
   inputProps,
   isOpen,
-  updateIsOpen = () => { },
+  updateIsOpen,
   disableOutsideClick = false,
   highlightFirstItem = true,
   showAll = false,
@@ -62,10 +74,10 @@ export default function AutoComplete({
 }: AutoCompleteProps) {
 
   const getPropValueRef = useRef<Function>();
-  const updateRef = useRef<Function>(updateIsOpen);
+  const updateRef = useRef<((open: boolean) => {}) | undefined>(updateIsOpen);
   const submitRef = useRef<Function>();
   const matchingItemsRef = useRef<MatchingItemsProps[]>([]);
-  const trie = useRef<any>();
+  const trie = useRef<TrieProps>();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropDownRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement[]>([]);
@@ -122,9 +134,9 @@ export default function AutoComplete({
       for (let i = 0; i < filteredItems.length; i++) {
         const item = filteredItems[i]
         if (item && typeof item == 'number') {
-          trie.current.insert(item.toString(), i)
+          trie.current?.insert(item.toString(), i)
         } else if (item) {
-          trie.current.insert(item, i)
+          trie.current?.insert(item, i)
         };
       };
     };
@@ -151,9 +163,9 @@ export default function AutoComplete({
           setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
         }
       } else if (showAll && inputRef.current?.value) {
-        setMatchingItems(trie.current.find(inputRef.current.value))
+        setMatchingItems(trie.current?.find(inputRef.current.value))
       } else if (!showAll && inputRef.current?.value) {
-        setMatchingItems(trie.current.find(inputRef.current.value))
+        setMatchingItems(trie.current?.find(inputRef.current.value))
       }
     };
   }, [isOpen, showAll, filteredItems])
@@ -164,16 +176,17 @@ export default function AutoComplete({
     if (itemsRef.current[highlightedIndex] && handleHighlight) {
       handleHighlight(list[matchingItems[highlightedIndex]!.originalIndex])
     }
+    itemsRef.current.length = matchingItems.length
   }, [handleHighlight, highlightedIndex, matchingItems, list])
 
   // If the input value is already a stored word the `handleSubmit` function runs
   // If the input value is not a stored word the handleNewValue function runs
   submitRef.current = () => {
-    let match = trie.current.contains(inputRef.current?.value);
+    let match = trie.current?.contains(inputRef.current?.value);
     if (match) {
       handleSubmit(list[match.originalIndex])
-    } else if (handleNewValue) {
-      handleNewValue(inputRef.current?.value.toString())
+    } else if (handleNewValue && inputRef.current?.value) {
+      handleNewValue(inputRef.current.value.toString())
     } else {
       handleSubmit(inputRef.current?.value.toString())
     }
@@ -202,7 +215,7 @@ export default function AutoComplete({
       return
     }
     if (prefix.length > 0) {
-      setMatchingItems(trie.current.find(event.target.value))
+      setMatchingItems(trie.current?.find(event.target.value))
       handleUpdateIsOpen(true)
     } else if (matchingItems.length) {
   
@@ -266,8 +279,8 @@ export default function AutoComplete({
           try {
             handleSelect(
               list[matchingItems[highlightedIndex]!.originalIndex],
-              itemsRef.current[highlightedIndex]
-            )
+              { element: itemsRef.current[highlightedIndex] }
+            );
           } catch (error) {
             console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
           }
@@ -276,15 +289,15 @@ export default function AutoComplete({
         resetInputValue(matchingItems[highlightedIndex]!.value)
       } else {
         if (inputRef.current?.value) {
-          let match = trie.current.contains(inputRef.current?.value);
+          let match = trie.current?.contains(inputRef.current?.value);
           try {
             if (!match) {
               if (handleNewValue) {
                 handleNewValue(inputRef.current.value.toString())
-              } else {
+              } else if(handleSelect){
                 handleSelect(inputRef.current.value.toString())
               }
-            } else {
+            } else if(handleSelect){
               handleSelect(list[match.originalIndex])
             }
           } catch (error) {
@@ -310,7 +323,7 @@ export default function AutoComplete({
   const onMouseClick = (index: number, selectedElement: HTMLDivElement, matchingItem: string) => {
     if (handleSelect) {
       try {
-        handleSelect(list[index], selectedElement)
+        handleSelect(list[index], { element: selectedElement })
       } catch (error) {
         console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
       }
@@ -362,16 +375,13 @@ export default function AutoComplete({
       return collator.compare(b.value, a.value)
     }
   });
-
   
-  console.log(itemsRef.current)
   const dropDownList = sorted.map((matchingItem: MatchingItemsProps, index: number) => {
     if (highlightedIndex + 1 > matchingItems.length) {
       setHighlightedIndex(0)
     }
-    itemsRef.current = []
     return (
-      matchingItem.value !== undefined && itemsRef.current[index] !== null ?
+      matchingItem.value !== undefined ?
         <div
           key={matchingItem.originalIndex}
           ref={el => itemsRef.current[index] = el!}
@@ -382,7 +392,6 @@ export default function AutoComplete({
         >
           {matchingItem.value}
         </div>
-        // : itemsRef.current.slice(0, index).concat(itemsRef.current.slice(index+1))
         : null
     )
   })
