@@ -1,4 +1,13 @@
-import { useEffect, useState, useRef, CSSProperties, Dispatch, SetStateAction, KeyboardEvent, ChangeEvent } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  CSSProperties,
+  Dispatch,
+  SetStateAction,
+  KeyboardEvent,
+  ChangeEvent
+} from "react";
 import scrollIntoView from 'dom-scroll-into-view';
 import isEqual from "lodash.isequal";
 import Wrapper from './Wrapper';
@@ -35,9 +44,9 @@ export interface MatchingItemsProps {
 }
 
 export interface TrieProps {
-  insert: Function,
+  insert: (value: string, index: number) => void,
   find: Function,
-  contains: Function,
+  contains: (value?: string) => any,
 }
 
 export default function AutoComplete<T>({
@@ -162,16 +171,20 @@ export default function AutoComplete<T>({
     }
   }, [filteredItems, open, prefix, highlightFirstItem, showAll])
 
-  // Opens dropdown when isOpen is passed from parent as `true` - close when `false`
-  // `handleUpdateIsOpen` function runs when the dropdown is opened/closed by the child -
-  // it sends the updated state of `isOpen` back to the parent
+  // Optionally control logic of dropdown by passing in desired state of open to `isOpen`
   useEffect(() => {
-    console.log("IRAN2")
-    if (updateRef.current && !isOpen) {
-      setOpen(false);
-    } else if (updateRef.current && isOpen) {
-      setOpen(true)
-    };
+    console.log("IRAN2", isOpen)
+    // if (!isOpen) {
+    //   console.log("Hi")
+    //   setOpen(false);
+    // } else if (isOpen) {
+    //   console.log("HEY")
+    //   setOpen(true)
+    // };
+    if(isOpen !== undefined) {
+       console.log("Hi")
+      setOpen(isOpen)
+    }
   }, [isOpen])
 
 
@@ -187,7 +200,7 @@ export default function AutoComplete<T>({
   // If the input value is already a stored word the `handleSubmit` function runs
   // If the input value is not a stored word the handleNewValue function runs
   submitRef.current = () => {
-    let match = trie.current?.contains(inputRef.current?.value);
+    let match : {value : string, originalIndex : number} = trie.current?.contains(inputRef.current?.value);
     if (match && handleSubmit) {
       handleSubmit(list[match.originalIndex])
     } else if (handleNewValue && inputRef.current?.value) {

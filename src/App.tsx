@@ -5,7 +5,7 @@ import "./index.css"
 
 function App() {
   const [submit, setSubmit] = useState(false);
-  const [openDropDown, setOpenDropDown] = useState(false);
+  const [openDropDown, setOpenDropDown] = useState<boolean>();
   const [filter, setFilter] = useState(true);
   const [sort, setSort] = useState(false);
   const [newList, setNewList] = useState<any[]>(testData);
@@ -134,7 +134,7 @@ function App() {
         // updateIsOpen={(updatedState) => {
         //   setOpenDropDown(updatedState)
         // }}
-        // isOpen={openDropDown}
+        isOpen={openDropDown}
       />
 
     </div>
