@@ -5,10 +5,10 @@ import "./index.css"
 
 function App() {
   const [submit, setSubmit] = useState(false);
-  const [openDropDown, setOpenDropDown] = useState();
+  const [openDropDown, setOpenDropDown] = useState(false);
   const [filter, setFilter] = useState(true);
   const [sort, setSort] = useState(false);
-  const [newList, setNewList] = useState(testData);
+  const [newList, setNewList] = useState<any[]>(testData);
   const toggleDropDown = (() => {
     setOpenDropDown(openDropDown ? false : true)
   })
@@ -22,7 +22,7 @@ function App() {
     setSubmit(true)
   })
   const toggleList = (() => {
-    setNewList(testData ? a : testData)
+    setNewList(newList === testData ? x : testData)
   })
 
   const x = [{
@@ -47,12 +47,6 @@ function App() {
   }]
   let a = [0, 33, 1, 55, 5, 111, 11, 333, 44]
 
-  
-  
-  const logMessage = (message) => {
-    return (message.map((listItem) => listItem.id));
-  };
-
   return (
     <div className="App">
       {/* {preview.name ? preview.name : ""} */}
@@ -63,7 +57,6 @@ function App() {
       <button className='ignore btn' style={{ padding: '10px' }} onClick={toggleList}>LIST</button>
 
       <AutoComplete
-        test={logMessage}
         //list={[0, 33, 1, 55, 5, 111, 11, 333, 44]}
         //list={newList}
         list={newList}
@@ -71,15 +64,15 @@ function App() {
 
         getPropValue={
           filter === false ?
-            (y) => {
+            (y : any[]) => {
               var vals = [];
               for (var i = 0; i < y.length; i++) {
-                vals.push(y[i].name);
+                vals.push(y[i]?.name);
               }
               return vals
             }
             :
-            (y) => {
+            (y : any[]) => {
               var vals = [];
               for (var i = 0; i < y.length; i++) {
                 vals.push(y[i].id);
@@ -138,10 +131,10 @@ function App() {
         updateSubmit={setSubmit}
 
         //disableOutsideClick={true}
-        updateIsOpen={(updatedState) => {
-          setOpenDropDown(updatedState)
-        }}
-        isOpen={openDropDown}
+        // updateIsOpen={(updatedState) => {
+        //   setOpenDropDown(updatedState)
+        // }}
+        // isOpen={openDropDown}
       />
 
     </div>

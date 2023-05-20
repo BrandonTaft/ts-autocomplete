@@ -22,7 +22,6 @@
     handleNewValue={(value) => {
       setNewList(oldList => [...oldList, {name:value}])
     }}
-    showAll={true}
     inputProps={{
       placeholder: "search..."
     }}
@@ -74,6 +73,40 @@ npm install --save react-autocomplete-input-component
 - Some Event handlers can be used
 - onClick, onChange, onKeyDown, onFocus cannot be overridden
 
+### `isOpen : Boolean` (Optional)
+- This prop is used to control the position of the dropdown
+- Can be used to add to the default logic or override it by setting `disableOutsideClick` to `true`
+- Use with `updateIsOpen` to completely control the dropdown
+
+### `updateIsOpen: Function` (Optional)
+- Function used to update the parent with the current position of the dropdown
+- Runs any time the dropdown is opened or closed
+
+```jsx
+  const [openDropDown, setOpenDropDown] = useState()
+
+  const toggleDropDown = () => {
+    setOpenDropDown(openDropDown ? false : true)
+  }
+
+  return(
+    <>
+      <button className='ignore' onClick={toggleDropDown} />
+      <AutoComplete
+        updateIsOpen={(updatedState) => {
+          setOpenDropDown(updatedState)
+        }}
+        isOpen={openDropDown}
+      />
+    </>
+  )
+```
+### `disableOutsideClick : Boolean` (Optional)
+- `false` (default) the dropdown closes when mouse is clicked outside of the `auto-complete wrapper div`
+- `true` the dropdown only closes when onSelect is invoked or the tab key is pressed
+- `NOTE` to control the dropdown with `updateIsOpen` and keep this enabled,
+  the element with the event handler should have a `className` of `ignore`
+
 ### `highlightFirstItem: Boolean` (Optional)
 - `true` (default) - automatically highlights first item in dropdown
 - `false` - Press arrow key or hover with mouse to highlight
@@ -86,19 +119,13 @@ npm install --save react-autocomplete-input-component
 - `false` (default) values in dropdown will be in ascending order by default
 - `true` - If set to `true` the values will be in descending order 
 
-### `disableOutsideClick : Boolean` (Optional)
-- `false` (default) the dropdown closes when mouse is clicked outside of the auto-complete wrapper div
-- `true` the dropdown only closes when onSelect fires or tab key is pressed
-- `NOTE!!!` to control the dropdown with `updateIsOpen` and keep this enabled,
-  the element controlling the event should have a `className` of `ignore`
-
 ### `clearOnSelect: Boolean` (Optional)
 - `true` (default) the input will clear when an item is selected
 - `false` value selected will become the input value
 - `onMouseDown` can be used in `inputProps` to clear the input
 
 ### `submit : Boolean` (Optional)
-- Only used if you want to use a `SUBMIT` button
+- Only used if you want to use the built-in `SUBMIT` button
 - Each time it is updated to `true` the `handleSubmit` function runs
 - Should be used with `updateSubmit` to update the state in the parent back to `false`
 
@@ -107,8 +134,7 @@ npm install --save react-autocomplete-input-component
 
 ### `handleSubmit: Function` (Optional)
 - Function that runs when the `submit` prop is updated to `true`
-- The 1st argument is the original string or object of the value selected
-- The 2nd argument is the item's original index from the original `list` prop
+- The omly argument is the original string or object of the value selected
 - If there is not a matching item and `handleNewValue` is not passed in, only the text input value is passed in as an argument
 - If `handleNewValue` is passed in, it will always run if the input value is not in the `list`
 
@@ -139,38 +165,6 @@ npm install --save react-autocomplete-input-component
     </>
   )
 ```
-
-### `isOpen : Boolean` (Optional)
-- This prop is used to set the position of the dropdown in the `AutoComplete` component
-- It is only necessary when using `updateIsOpen` to control the dropdown
-- `true` is passed in to open the dropdown
-- `false` is passed in to close the dropdown
-
-### `updateIsOpen: Function` (Optional)
-- Function used to update the parent with the current position of the dropdown
-- Runs when dropdown opens by entering text or closes by clicking outside of the element 
-
-```jsx
-  const [openDropDown, setOpenDropDown] = useState()
-
-  const toggleDropDown = () => {
-    setOpenDropDown(openDropDown ? false : true)
-  }
-
-  return(
-    <>
-      <button className='ignore' onClick={toggleDropDown} />
-      <AutoComplete
-        updateIsOpen={(updatedState) => {
-          setOpenDropDown(updatedState)
-        }}
-        isOpen={openDropDown}
-      />
-    </>
-  )
-```
-
-
 
 ### `wrapperStyle: Object` (Optional)
 - J.S. Style Object Variable for the `div` wrapping the whole component
@@ -204,11 +198,3 @@ npm install --save react-autocomplete-input-component
     }}
   />
 ```
-
-
-
-
-
-
-
-

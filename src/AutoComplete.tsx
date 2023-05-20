@@ -1,32 +1,32 @@
-import { useEffect, useState, useRef, useReducer, HTMLAttributes, CSSProperties } from "react";
+import { useEffect, useState, useRef, CSSProperties, Dispatch, SetStateAction, KeyboardEvent, ChangeEvent } from "react";
 import scrollIntoView from 'dom-scroll-into-view';
 import isEqual from "lodash.isequal";
 import Wrapper from './Wrapper';
 import Trie from "./trie";
 
-export interface AutoCompleteProps{
-  list: [];
-  getPropValue?: (list: []) => {};
-  handleHighlight?: (item: any) => {};
-  handleSelect?: (item: any , options?: {element? : HTMLDivElement}) => {};
-  handleNewValue?: (item: string) => {};
-  inputProps?: {};
+export interface AutoCompleteProps<T> {
+  list: T[];
+  getPropValue?: (list: T[]) => void;
+  handleHighlight?: (item?: any) => void;
+  handleSelect?: (item?: T | string, element?: HTMLDivElement) => void;
+  handleNewValue?: (item: string) => void;
+  updateIsOpen?: Dispatch<SetStateAction<boolean>>
+  handleSubmit?: (item?: T | string) => void;
+  updateSubmit?: (open: boolean) => void;
+  inputProps?: object;
   isOpen?: boolean;
-  updateIsOpen?: (open: boolean) => {};
   disableOutsideClick?: boolean;
   highlightFirstItem?: boolean;
   showAll?: boolean;
   descending?: boolean;
   clearOnSelect?: boolean;
   submit?: boolean;
-  updateSubmit?: Function;
-  handleSubmit?: Function;
   clearOnSubmit?: boolean;
-  wrapperStyle:  CSSProperties;
+  wrapperStyle: CSSProperties;
   inputStyle: CSSProperties;
-  dropDownStyle:  CSSProperties;
-  listItemStyle:  CSSProperties;
-  highlightedItemStyle:  CSSProperties;
+  dropDownStyle: CSSProperties;
+  listItemStyle: CSSProperties;
+  highlightedItemStyle: CSSProperties;
 }
 
 export interface MatchingItemsProps {
@@ -40,13 +40,7 @@ export interface TrieProps {
   contains: Function,
 }
 
-export interface SelectParams {
-  message: string;
-  title?: string;
-  autoHideAfter?: number;
-}
-
-export default function AutoComplete({
+export default function AutoComplete<T>({
   list = [],
   getPropValue,
   handleHighlight,
@@ -61,37 +55,39 @@ export default function AutoComplete({
   descending = false,
   clearOnSelect = handleSelect ? true : false,
   submit,
-  updateSubmit = () => { },
-  handleSubmit = () => { },
+  updateSubmit,
+  handleSubmit,
   clearOnSubmit = true,
-  wrapperStyle = {},
+  wrapperStyle,
   inputStyle,
   dropDownStyle,
   listItemStyle,
   highlightedItemStyle = {
     backgroundColor: "dodgerBlue"
   }
-}: AutoCompleteProps) {
+}: AutoCompleteProps<T>) {
 
   const getPropValueRef = useRef<Function>();
-  const updateRef = useRef<((open: boolean) => {}) | undefined>(updateIsOpen);
-  const submitRef = useRef<Function>();
-  const matchingItemsRef = useRef<MatchingItemsProps[]>([]);
+  const updateRef = useRef<((open: boolean) => void)>();
+  const submitRef = useRef<(item?: string) => void>();
   const trie = useRef<TrieProps>();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropDownRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement[]>([]);
   const [savedList, setSavedList] = useState<any[]>([]);
+  const [open, setOpen] = useState<boolean>(false)
   const [matchingItems, setMatchingItems] = useState<MatchingItemsProps[]>([]);
   const [filteredItems, setFilteredItems] = useState<any[]>([]);
   const [savedFunction, setSavedFunction] = useState<string>();
+  const [prefix, setPrefix] = useState<string>("");
   const [highlightedIndex, setHighlightedIndex] = useState<number>(highlightFirstItem ? 0 : -1);
+
+  updateRef.current = updateIsOpen
 
   // If `list` is new - store it in the `savedList` state
   if (!isEqual(list, savedList)) {
     setSavedList(list)
   }
-
   // If `getPropValue` is new - store it as a string in the `savedFunction` state
   // Store the new `getPropValue` function in the `getPropValueRef`
   if (getPropValue && getPropValue.toString() !== savedFunction) {
@@ -103,7 +99,6 @@ export default function AutoComplete({
   // Create the `filteredItems` array with specified words to go into the trie
   // If `list` contains objects - use getPropvalueRef to map out desired words  
   useEffect(() => {
-    console.log('useEffect')
     if (Array.isArray(savedList)) {
       if (savedList.some(value => { return typeof value == "object" })) {
         if (getPropValueRef.current) {
@@ -129,6 +124,7 @@ export default function AutoComplete({
 
   //Insert the items in `filteredItems` into the trie
   useEffect(() => {
+    console.log("trie")
     trie.current = new Trie();
     if (filteredItems) {
       for (let i = 0; i < filteredItems.length; i++) {
@@ -145,30 +141,39 @@ export default function AutoComplete({
   // Runs when dropdown is open and the getPropValue function changes
   // Allows user to toggle property values in dropdown while its open
   useEffect(() => {
-    if (matchingItemsRef.current.length) {
-      setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
+    console.log("IRAN")
+    if (updateRef.current) { updateRef.current(open) }
+    if (open) {
+      if (inputRef.current?.value) {
+        setMatchingItems(trie.current?.find(inputRef.current.value))
+      } else {
+        if (!inputRef.current?.value && showAll) {
+          setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
+        } else if (!inputRef.current?.value && !showAll) {
+          setMatchingItems([])
+          setHighlightedIndex(highlightFirstItem === false ? -1 : 0)
+          setOpen(false);
+        }
+      }
+    } else {
+      setMatchingItems([])
+      setHighlightedIndex(highlightFirstItem === false ? -1 : 0)
+      setOpen(false);
     }
-  }, [filteredItems])
+  }, [filteredItems, open, prefix, highlightFirstItem, showAll])
 
   // Opens dropdown when isOpen is passed from parent as `true` - close when `false`
   // `handleUpdateIsOpen` function runs when the dropdown is opened/closed by the child -
   // it sends the updated state of `isOpen` back to the parent
   useEffect(() => {
+    console.log("IRAN2")
     if (updateRef.current && !isOpen) {
-      setMatchingItems([])
+      setOpen(false);
     } else if (updateRef.current && isOpen) {
-      if (inputRef.current) { inputRef.current.focus() }
-      if (showAll && !inputRef.current?.value) {
-        if (filteredItems) {
-          setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
-        }
-      } else if (showAll && inputRef.current?.value) {
-        setMatchingItems(trie.current?.find(inputRef.current.value))
-      } else if (!showAll && inputRef.current?.value) {
-        setMatchingItems(trie.current?.find(inputRef.current.value))
-      }
+      setOpen(true)
     };
-  }, [isOpen, showAll, filteredItems])
+  }, [isOpen])
+
 
   // Runs the function passed in as `handleHighlight` prop
   // Passes in the higlighted element's `HTMLDivElement` & the string or object from the original list
@@ -183,12 +188,12 @@ export default function AutoComplete({
   // If the input value is not a stored word the handleNewValue function runs
   submitRef.current = () => {
     let match = trie.current?.contains(inputRef.current?.value);
-    if (match) {
+    if (match && handleSubmit) {
       handleSubmit(list[match.originalIndex])
     } else if (handleNewValue && inputRef.current?.value) {
-      handleNewValue(inputRef.current.value.toString())
-    } else {
-      handleSubmit(inputRef.current?.value.toString())
+      handleNewValue(inputRef.current.value)
+    } else if (handleSubmit) {
+      handleSubmit(inputRef.current?.value)
     }
     resetOnSubmit(inputRef.current?.value)
   }
@@ -199,39 +204,24 @@ export default function AutoComplete({
     if (submit && inputRef.current?.value && submitRef.current) {
       submitRef.current()
     }
-    updateSubmit(false)
+    if (updateSubmit) {
+      updateSubmit(false)
+    }
   }, [submit, updateSubmit])
 
-  // Handles text input and if `showAll` is true it opens the dropdown when input is focused
-  // Runs the trie's `find` method to search for words that match the text input
-  const handlePrefix = (event: { target: { value: string; }; }) => {
-    const prefix = event.target.value
-    if (!highlightFirstItem) {
-      setHighlightedIndex(1)
-    }
-    if (filteredItems && showAll && prefix.length === 0) {
-      setMatchingItems(filteredItems.map((item, index) => ({value: item,originalIndex: index})))
-      handleUpdateIsOpen(true)
-      return
-    }
-    if (prefix.length > 0) {
-      setMatchingItems(trie.current?.find(event.target.value))
-      handleUpdateIsOpen(true)
-    } else if (matchingItems.length) {
-  
-      setMatchingItems([])
-      handleUpdateIsOpen(false)
-    }
-    if (highlightedIndex + 1 > matchingItems.length) {
-      setHighlightedIndex(0)
+  // Text input onChange sets value to prefix state and opens dropdown
+  const handlePrefix = ({ target }: ChangeEvent<HTMLInputElement>) => {
+    setPrefix(target.value)
+    if (target.value) {
+      setOpen(true)
     }
   };
 
-  const handleKeyDown = (e: { keyCode: number; preventDefault: () => void; }) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     // Down Arrow - sets the next index in the 'dropDownList' as the highlighted index
     // `scrollIntoView` scrolls the dropdown to keep highlight visible once it reaches the bottom 
     // If the highlighted index is the last index it resets the highlighted index back to 0
-    if (e.keyCode === 40 && matchingItems.length) {
+    if (e.key === 'ArrowDown' && matchingItems.length) {
       e.preventDefault()
       if (!itemsRef.current[highlightedIndex + 1]) {
         setHighlightedIndex(0)
@@ -253,7 +243,7 @@ export default function AutoComplete({
 
     // Up Arrow - Moves highlight up the dropdown by setting highlighted index one index back
     // `scrollIntoView` scrolls the dropdown to keep highlight visible once it reaches the top 
-    if (e.keyCode === 38) {
+    if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (itemsRef.current[highlightedIndex - 1]) {
         setHighlightedIndex(highlightedIndex - 1)
@@ -265,12 +255,11 @@ export default function AutoComplete({
       }
     };
 
-    // Enter key - Executes the `onSelect` function with 3 seperate arguments - 
-    // the highlighted item's original `string` or `object`, it's `HTMLelement`, and it's index from the original list
+    // Enter key - Executes the `onSelect` function with the highlighted item's original value and it's `HTMLelement` if highlighted
     // If there is not a highlighted item it will pass the input's value into the 'onSelect' function
     // Then closes the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input or not
-    if (e.keyCode === 13) {
-      if (handleSubmit && !matchingItems.length) {
+    if (e.key === 'Enter') {
+      if (handleSubmit && !matchingItems.length && updateSubmit) {
         updateSubmit(true)
         return
       }
@@ -279,13 +268,13 @@ export default function AutoComplete({
           try {
             handleSelect(
               list[matchingItems[highlightedIndex]!.originalIndex],
-              { element: itemsRef.current[highlightedIndex] }
+              itemsRef.current[highlightedIndex]
             );
           } catch (error) {
             console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
           }
         }
-        setHighlightedIndex(highlightedIndex + 1)
+        setOpen(false)
         resetInputValue(matchingItems[highlightedIndex]!.value)
       } else {
         if (inputRef.current?.value) {
@@ -293,42 +282,39 @@ export default function AutoComplete({
           try {
             if (!match) {
               if (handleNewValue) {
-                handleNewValue(inputRef.current.value.toString())
-              } else if(handleSelect){
-                handleSelect(inputRef.current.value.toString())
+                handleNewValue(inputRef.current.value)
+              } else if (handleSelect) {
+                handleSelect(inputRef.current.value)
               }
-            } else if(handleSelect){
+            } else if (handleSelect) {
               handleSelect(list[match.originalIndex])
             }
           } catch (error) {
             console.error("MISSING PROP: You must provide a valid function to the 'onSelect' prop", '\n', error)
           } finally {
-            setMatchingItems([]);
+            setOpen(false)
             resetInputValue(inputRef.current.value)
           }
         }
       }
     }
     // Tab key takes focus off the input and closes the dropdown 
-    if (e.keyCode === 9) {
-      setMatchingItems([]);
-      handleUpdateIsOpen(false)
+    if (e.key === 'Tab') {
+      setOpen(false)
     }
   }
 
-  // When an item is clicked on - Executes the `onSelect` function with 3 seperate arguments - 
-  // the highlighted item's original `string` or `object`, it's `HTMLelement`, and it's index from the original list
-  // If there is not a highlighted item it will pass the input's value into the 'onSelect' function
+  // When an item is clicked on - invokes the `onSelect` function with highlighted item's original value and it's `HTMLelement`
   // Then closes the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input or not
   const onMouseClick = (index: number, selectedElement: HTMLDivElement, matchingItem: string) => {
     if (handleSelect) {
       try {
-        handleSelect(list[index], { element: selectedElement })
+        handleSelect(list[index], selectedElement)
       } catch (error) {
         console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
       }
     }
-    setMatchingItems([]);
+    setOpen(false)
     resetInputValue(matchingItem);
   }
 
@@ -375,11 +361,8 @@ export default function AutoComplete({
       return collator.compare(b.value, a.value)
     }
   });
-  
+
   const dropDownList = sorted.map((matchingItem: MatchingItemsProps, index: number) => {
-    if (highlightedIndex + 1 > matchingItems.length) {
-      setHighlightedIndex(0)
-    }
     return (
       matchingItem.value !== undefined ?
         <div
@@ -388,7 +371,7 @@ export default function AutoComplete({
           className={highlightedIndex === index ? "dropdown-item highlited-item" : "dropdown-item"}
           style={highlightedIndex === index ? { ...highlightedItemStyle, ...listItemStyle } : { ...listItemStyle }}
           onClick={() => onMouseClick(matchingItem.originalIndex, itemsRef.current[index]!, matchingItem.value)}
-          onMouseEnter={() => setHighlightedIndex(index) }
+          onMouseEnter={() => setHighlightedIndex(index)}
         >
           {matchingItem.value}
         </div>
@@ -403,9 +386,8 @@ export default function AutoComplete({
       wrapperStyle={wrapperStyle}
       onOutsideClick={() => {
         if (matchingItems.length) {
-          setMatchingItems([]);
+          setOpen(false)
         }
-        handleUpdateIsOpen(false)
       }}>
       <input
         className="autocomplete-input"
@@ -413,10 +395,9 @@ export default function AutoComplete({
         ref={inputRef}
         type="search"
         {...inputProps}
-        onClick={() => handlePrefix}
         onChange={handlePrefix}
         onKeyDown={handleKeyDown}
-        onFocus={handlePrefix}
+        onFocus={() => setOpen(true)}
         autoComplete='off'
       />
       {dropDownList.length
@@ -435,8 +416,6 @@ export default function AutoComplete({
   )
 
   // Sets the value of the input to be what is specified in 'clearOnSelect' prop
-  // When handleSelect runs it will clear the input if 'clearOnSelect' is set to true
-  // If clearOnSelect is set to false it will set the input value to the word passed in
   function resetInputValue(matchingItem: string) {
     if (inputRef.current) {
       if (clearOnSelect) {
@@ -447,16 +426,13 @@ export default function AutoComplete({
         } else {
           inputRef.current.value = matchingItem;
           inputRef.current.focus()
-          setMatchingItems([]);
+          setOpen(false)
         }
       }
     }
-    handleUpdateIsOpen(false)
   }
 
   // Sets the value of the input to be what is specified in 'clearOnSubmit' prop
-  // When handleSelect runs it will clear the input if 'clearOnSubmit' is set to true
-  // If clearOnSubmit is set to false it will set the input value to the word passed in
   function resetOnSubmit(matchingItem: string | undefined) {
     if (inputRef.current) {
       if (clearOnSubmit) {
@@ -467,17 +443,9 @@ export default function AutoComplete({
         } else {
           inputRef.current.value = matchingItem;
           inputRef.current?.focus()
-          setMatchingItems([]);
+          setOpen(false)
         }
       }
-    }
-  }
-
-  // Passes the state of `isOpen` back to parent when dropdown is open -
-  // or closed from the Autocomplete function ("the child")
-  function handleUpdateIsOpen(isItOpen: boolean) {
-    if (updateIsOpen) {
-      updateIsOpen(isItOpen)
     }
   }
 }
