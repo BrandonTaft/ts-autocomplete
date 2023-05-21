@@ -3,8 +3,6 @@ import React, {
   useState,
   useRef,
   CSSProperties,
-  Dispatch,
-  SetStateAction,
   KeyboardEvent,
   ChangeEvent
 } from "react";
@@ -16,13 +14,13 @@ import Trie from "./trie";
 export interface AutoCompleteProps<T> {
   list: T[];
   getPropValue?: (list: T[]) => void;
-  handleHighlight?: (item?: any) => void;
-  handleSelect?: (item?: T | string, element?: HTMLDivElement) => void;
+  handleHighlight?: (item: T) => void;
+  handleSelect?: (item: T | string, element?: HTMLDivElement) => void;
   handleNewValue?: (item: string) => void;
-  updateIsOpen?: Dispatch<SetStateAction<boolean>>
-  handleSubmit?: (item?: T | string) => void;
-  updateSubmit?: (open: boolean) => void;
-  inputProps?: object;
+  updateIsOpen?: (open: boolean) => void
+  handleSubmit?: (item: T | string) => void;
+  updateSubmit?: (submit: boolean) => void;
+  inputProps?: T;
   isOpen?: boolean;
   disableOutsideClick?: boolean;
   highlightFirstItem?: boolean;
@@ -45,7 +43,7 @@ export interface MatchingItemsProps {
 
 export interface TrieProps {
   insert: (value: string, index: number) => void,
-  find: Function,
+  find: (value: string) => any,
   contains: (value?: string) => any,
 }
 
@@ -66,7 +64,6 @@ export default function AutoComplete<T>({
   submit,
   updateSubmit,
   handleSubmit,
-  clearOnSubmit = true,
   wrapperStyle,
   inputStyle,
   dropDownStyle,
@@ -147,10 +144,9 @@ export default function AutoComplete<T>({
     };
   }, [filteredItems])
 
-  // Runs when dropdown is open and the getPropValue function changes
-  // Allows user to toggle property values in dropdown while its open
+  // When dropdown is opened - sets the items to be displayed
+  // When dropdown is closed - resets the matching items and highlighted index
   useEffect(() => {
-    console.log("IRAN")
     if (updateRef.current) { updateRef.current(open) }
     if (open) {
       if (inputRef.current?.value) {
@@ -173,47 +169,36 @@ export default function AutoComplete<T>({
 
   // Optionally control logic of dropdown by passing in desired state of open to `isOpen`
   useEffect(() => {
-    console.log("IRAN2", isOpen)
-    // if (!isOpen) {
-    //   console.log("Hi")
-    //   setOpen(false);
-    // } else if (isOpen) {
-    //   console.log("HEY")
-    //   setOpen(true)
-    // };
-    if(isOpen !== undefined) {
-       console.log("Hi")
+    if (isOpen !== undefined) {
       setOpen(isOpen)
     }
   }, [isOpen])
 
-
-  // Runs the function passed in as `handleHighlight` prop
-  // Passes in the higlighted element's `HTMLDivElement` & the string or object from the original list
+  // When highlightedIndex changes - Invokes `handleHighlight` function with highlighted item's value
   useEffect(() => {
     if (itemsRef.current[highlightedIndex] && handleHighlight) {
-      handleHighlight(list[matchingItems[highlightedIndex]!.originalIndex])
+      handleHighlight(list[matchingItems[highlightedIndex]!.originalIndex]!)
     }
     itemsRef.current.length = matchingItems.length
   }, [handleHighlight, highlightedIndex, matchingItems, list])
 
-  // If the input value is already a stored word the `handleSubmit` function runs
-  // If the input value is not a stored word the handleNewValue function runs
+  // If the input value is already a stored value, `handleSubmit` is invoked
+  // If the input value is not a stored word `handleNewValue` is invoked
   submitRef.current = () => {
-    let match : {value : string, originalIndex : number} = trie.current?.contains(inputRef.current?.value);
+    let match: { value: string, originalIndex: number } = trie.current?.contains(inputRef.current?.value);
     if (match && handleSubmit) {
-      handleSubmit(list[match.originalIndex])
+      handleSubmit(list[match.originalIndex]!)
     } else if (handleNewValue && inputRef.current?.value) {
       handleNewValue(inputRef.current.value)
     } else if (handleSubmit) {
-      handleSubmit(inputRef.current?.value)
+      handleSubmit(inputRef.current?.value!)
     }
-    resetOnSubmit(inputRef.current?.value)
   }
 
-  // When submit is updated to `true` and text is entered into the input
-  // The function stored in the `submitRef` will run the set submit back to false
+  // Invokes function stored in submitRef when submit is updated to `true` and text is present
+  // The function stored in the `submitRef` will set submit back to false
   useEffect(() => {
+    console.log("submit", submit)
     if (submit && inputRef.current?.value && submitRef.current) {
       submitRef.current()
     }
@@ -280,7 +265,7 @@ export default function AutoComplete<T>({
         if (handleSelect) {
           try {
             handleSelect(
-              list[matchingItems[highlightedIndex]!.originalIndex],
+              list[matchingItems[highlightedIndex]!.originalIndex]!,
               itemsRef.current[highlightedIndex]
             );
           } catch (error) {
@@ -300,7 +285,7 @@ export default function AutoComplete<T>({
                 handleSelect(inputRef.current.value)
               }
             } else if (handleSelect) {
-              handleSelect(list[match.originalIndex])
+              handleSelect(list[match.originalIndex]!)
             }
           } catch (error) {
             console.error("MISSING PROP: You must provide a valid function to the 'onSelect' prop", '\n', error)
@@ -322,7 +307,7 @@ export default function AutoComplete<T>({
   const onMouseClick = (index: number, selectedElement: HTMLDivElement, matchingItem: string) => {
     if (handleSelect) {
       try {
-        handleSelect(list[index], selectedElement)
+        handleSelect(list[index]!, selectedElement)
       } catch (error) {
         console.error("You must provide a valid function to the 'onSelect' prop", '\n', error)
       }
@@ -351,7 +336,7 @@ export default function AutoComplete<T>({
           }
         )
       }
-      if (bottom < itemTop + (itemHeight / 1.2)) {
+      if (bottom < itemTop + (itemHeight)) {
         setHighlightedIndex(highlightedIndex - 1)
         scrollIntoView(
           itemsRef.current[highlightedIndex],
@@ -439,23 +424,6 @@ export default function AutoComplete<T>({
         } else {
           inputRef.current.value = matchingItem;
           inputRef.current.focus()
-          setOpen(false)
-        }
-      }
-    }
-  }
-
-  // Sets the value of the input to be what is specified in 'clearOnSubmit' prop
-  function resetOnSubmit(matchingItem: string | undefined) {
-    if (inputRef.current) {
-      if (clearOnSubmit) {
-        inputRef.current.value = "";
-      } else {
-        if (!matchingItem) {
-          inputRef.current.value = ""
-        } else {
-          inputRef.current.value = matchingItem;
-          inputRef.current?.focus()
           setOpen(false)
         }
       }

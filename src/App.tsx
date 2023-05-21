@@ -8,9 +8,9 @@ function App() {
   const [openDropDown, setOpenDropDown] = useState<boolean>();
   const [filter, setFilter] = useState(true);
   const [sort, setSort] = useState(false);
-  const [newList, setNewList] = useState<any[]>(testData);
+  const [newList, setNewList] = useState<(object | number)[]>(testData);
   const toggleDropDown = (() => {
-    setOpenDropDown(openDropDown ? false : true)
+    setOpenDropDown(!openDropDown)
   })
   const toggleFilter = (() => {
     setFilter(filter => !filter)
@@ -22,7 +22,7 @@ function App() {
     setSubmit(true)
   })
   const toggleList = (() => {
-    setNewList(newList === testData ? x : testData)
+    setNewList(newList === testData ? a : testData)
   })
 
   const x = [{
@@ -127,16 +127,12 @@ function App() {
 
 
         submit={submit}
-        //clearOnSubmit={false}
         updateSubmit={setSubmit}
 
         //disableOutsideClick={true}
-        // updateIsOpen={(updatedState) => {
-        //   setOpenDropDown(updatedState)
-        // }}
+        updateIsOpen={setOpenDropDown}
         isOpen={openDropDown}
       />
-
     </div>
   );
 }

@@ -138,11 +138,6 @@ npm install --save react-autocomplete-input-component
 - If there is not a matching item and `handleNewValue` is not passed in, only the text input value is passed in as an argument
 - If `handleNewValue` is passed in, it will always run if the input value is not in the `list`
 
-### `clearOnSubmit: Boolean` (Optional)
-- `true` (default) the input will clear when an item is selected
-- `false` value selected will become the input value
-- `onMouseDown` can be used in `inputProps` to clear the input
-
 ```jsx
   const [submit, setSubmit] = useState(false);
 
