@@ -8,7 +8,9 @@ function App() {
   const [openDropDown, setOpenDropDown] = useState<boolean>();
   const [filter, setFilter] = useState(true);
   const [sort, setSort] = useState(false);
-  const [newList, setNewList] = useState<(object | number)[]>(testData);
+  const [newList, setNewList] = useState<(getProps | number)[]>(testData);
+  let a = [0, 33, 1, 55, 5, 111, 11, 333, 44]
+
   const toggleDropDown = (() => {
     setOpenDropDown(!openDropDown)
   })
@@ -25,31 +27,15 @@ function App() {
     setNewList(newList === testData ? a : testData)
   })
 
-  const x = [{
-    "id": "488f3c2a-8140-4b08-abd0-f600b5f2b85a"
-  },
-  {
-    "id": "4fc4e79c-5f83-4560-aa15-ce289e59177b"
-  },
-  {
-    "id": "2e59d604-a42a-422a-a722-0b775f44d27c"
-  },
-  {
-    "name": "4fc4e"
-  },
-  {
-    "name": "2e59d"
-  },
-  {
-    "id": "488f3",
-    "name": "John Doe",
-    "age": 28
-  }]
-  let a = [0, 33, 1, 55, 5, 111, 11, 333, 44]
+  interface getProps {
+    name?: string,
+    age?: string | number,
+    id?: string,
+    nam?: string 
+  }
 
   return (
     <div className="App">
-      {/* {preview.name ? preview.name : ""} */}
       <button className='ignore btn' style={{ padding: '10px' }} onClick={toggleDropDown}>OPEN/CLOSE</button>
       <button className='ignore btn' style={{ padding: '10px' }} onClick={toggleFilter}>FILTER</button>
       <button className='ignore btn' style={{ padding: '10px' }} onClick={toggleSort}>SORT</button>
@@ -57,14 +43,11 @@ function App() {
       <button className='ignore btn' style={{ padding: '10px' }} onClick={toggleList}>LIST</button>
 
       <AutoComplete
-        //list={[0, 33, 1, 55, 5, 111, 11, 333, 44]}
-        //list={newList}
         list={newList}
-        //list={testData}
-
         getPropValue={
           filter === false ?
-            (y : any[]) => {
+            (y: getProps[]) => {
+             
               var vals = [];
               for (var i = 0; i < y.length; i++) {
                 vals.push(y[i]?.name);
@@ -72,28 +55,26 @@ function App() {
               return vals
             }
             :
-            (y : any[]) => {
-              var vals = [];
-              for (var i = 0; i < y.length; i++) {
-                vals.push(y[i].id);
-              }
-              return vals
+            (y: getProps[]) => {
+              return y.map((listItem) => listItem.id)
             }
         }
-        //getPropValue={logMessage}
-        // handleHighlight={(item) => {
+       
+        // handleHighlight={(item: number | getProps) => {
         //   console.log(item)
         // }}
-        handleSelect={(item, element) => {
+        handleSelect={(item : number | getProps, element: HTMLDivElement) => {
           console.log("handleSelect")
           console.log(element)
           console.log(item)
         }}
         handleNewValue={(value) => {
           console.log("HANDLE NEW VALUE")
+          return (
           setNewList(newList => [...newList, {name:value}])
+          )
         }}
-        handleSubmit={(selectedItem) => {
+        handleSubmit={(selectedItem: any) => {
           console.log("HANDLE SUBMIT")
           console.log(selectedItem)
         }}
@@ -128,10 +109,10 @@ function App() {
 
         submit={submit}
         updateSubmit={setSubmit}
-
+        //showNoMatchMessage={"Fuck You"}
         //disableOutsideClick={true}
-        updateIsOpen={setOpenDropDown}
-        isOpen={openDropDown}
+        // updateIsOpen={setOpenDropDown}
+        // isOpen={openDropDown}
       />
     </div>
   );

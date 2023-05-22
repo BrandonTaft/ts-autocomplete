@@ -4,6 +4,7 @@ import React, {
   useRef,
   CSSProperties,
   KeyboardEvent,
+  FocusEvent,
   ChangeEvent
 } from "react";
 import scrollIntoView from 'dom-scroll-into-view';
@@ -13,22 +14,23 @@ import Trie from "./trie";
 
 export interface AutoCompleteProps<T> {
   list: T[];
-  getPropValue?: (list: T[]) => void;
-  handleHighlight?: (item: T) => void;
-  handleSelect?: (item: T | string, element?: HTMLDivElement) => void;
   handleNewValue?: (item: string) => void;
   updateIsOpen?: (open: boolean) => void
-  handleSubmit?: (item: T | string) => void;
   updateSubmit?: (submit: boolean) => void;
-  inputProps?: T;
+  showNoMatchMessage?: boolean | string,
+  getPropValue?: Function;
+  handleSelect?: Function;
+  handleSubmit?: Function;
+  handleHighlight?: Function;
+  inputProps?: object;
   isOpen?: boolean;
   disableOutsideClick?: boolean;
   highlightFirstItem?: boolean;
   showAll?: boolean;
   descending?: boolean;
   clearOnSelect?: boolean;
-  submit?: boolean;
   clearOnSubmit?: boolean;
+  submit?: boolean;
   wrapperStyle: CSSProperties;
   inputStyle: CSSProperties;
   dropDownStyle: CSSProperties;
@@ -43,7 +45,7 @@ export interface MatchingItemsProps {
 
 export interface TrieProps {
   insert: (value: string, index: number) => void,
-  find: (value: string) => any,
+  find: (value?: string, showNoMatchMessage?: boolean | string) => any,
   contains: (value?: string) => any,
 }
 
@@ -56,11 +58,13 @@ export default function AutoComplete<T>({
   inputProps,
   isOpen,
   updateIsOpen,
+  showNoMatchMessage = true,
   disableOutsideClick = false,
   highlightFirstItem = true,
   showAll = false,
   descending = false,
   clearOnSelect = handleSelect ? true : false,
+  clearOnSubmit = true,
   submit,
   updateSubmit,
   handleSubmit,
@@ -74,7 +78,6 @@ export default function AutoComplete<T>({
 }: AutoCompleteProps<T>) {
 
   const getPropValueRef = useRef<Function>();
-  const updateRef = useRef<((open: boolean) => void)>();
   const submitRef = useRef<(item?: string) => void>();
   const trie = useRef<TrieProps>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,8 +90,6 @@ export default function AutoComplete<T>({
   const [savedFunction, setSavedFunction] = useState<string>();
   const [prefix, setPrefix] = useState<string>("");
   const [highlightedIndex, setHighlightedIndex] = useState<number>(highlightFirstItem ? 0 : -1);
-
-  updateRef.current = updateIsOpen
 
   // If `list` is new - store it in the `savedList` state
   if (!isEqual(list, savedList)) {
@@ -147,14 +148,16 @@ export default function AutoComplete<T>({
   // When dropdown is opened - sets the items to be displayed
   // When dropdown is closed - resets the matching items and highlighted index
   useEffect(() => {
-    if (updateRef.current) { updateRef.current(open) }
+    console.log("run")
+    if (updateIsOpen) { updateIsOpen(open) }
     if (open) {
       if (inputRef.current?.value) {
-        setMatchingItems(trie.current?.find(inputRef.current.value))
+        setMatchingItems(trie.current?.find(inputRef.current.value, showNoMatchMessage))
       } else {
         if (!inputRef.current?.value && showAll) {
           setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
-        } else if (!inputRef.current?.value && !showAll) {
+        }
+        else if (!inputRef.current?.value && !showAll) {
           setMatchingItems([])
           setHighlightedIndex(highlightFirstItem === false ? -1 : 0)
           setOpen(false);
@@ -163,16 +166,15 @@ export default function AutoComplete<T>({
     } else {
       setMatchingItems([])
       setHighlightedIndex(highlightFirstItem === false ? -1 : 0)
-      setOpen(false);
     }
-  }, [filteredItems, open, prefix, highlightFirstItem, showAll])
+  }, [filteredItems, open, prefix, highlightFirstItem, showAll, showNoMatchMessage, updateIsOpen])
 
   // Optionally control logic of dropdown by passing in desired state of open to `isOpen`
   useEffect(() => {
-    if (isOpen !== undefined) {
+    if (isOpen !== undefined && (inputRef.current?.value || showAll)) {
       setOpen(isOpen)
     }
-  }, [isOpen])
+  }, [isOpen, showAll])
 
   // When highlightedIndex changes - Invokes `handleHighlight` function with highlighted item's value
   useEffect(() => {
@@ -193,6 +195,7 @@ export default function AutoComplete<T>({
     } else if (handleSubmit) {
       handleSubmit(inputRef.current?.value!)
     }
+    resetOnSubmit(inputRef.current?.value!)
   }
 
   // Invokes function stored in submitRef when submit is updated to `true` and text is present
@@ -253,7 +256,7 @@ export default function AutoComplete<T>({
       }
     };
 
-    // Enter key - Executes the `onSelect` function with the highlighted item's original value and it's `HTMLelement` if highlighted
+    // Enter key - Invokes the `onSelect` function with the highlighted item's original value and it's `HTMLelement` if highlighted
     // If there is not a highlighted item it will pass the input's value into the 'onSelect' function
     // Then closes the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input or not
     if (e.key === 'Enter') {
@@ -302,8 +305,15 @@ export default function AutoComplete<T>({
     }
   }
 
-  // When an item is clicked on - invokes the `onSelect` function with highlighted item's original value and it's `HTMLelement`
-  // Then closes the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input or not
+  // Opens dropdown when input is focused and `showAll` is `true` with text present
+  const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
+    if (showAll || e.target.value) {
+      setOpen(true)
+    }
+  };
+
+  // When an item is clicked - invokes the `onSelect` function with highlighted item's original value and `HTMLelement`
+  // loses the dropdown and runs the `resetInputValue` function which uses `clearOnSelect` prop to clear the input
   const onMouseClick = (index: number, selectedElement: HTMLDivElement, matchingItem: string) => {
     if (handleSelect) {
       try {
@@ -368,8 +378,14 @@ export default function AutoComplete<T>({
           ref={el => itemsRef.current[index] = el!}
           className={highlightedIndex === index ? "dropdown-item highlited-item" : "dropdown-item"}
           style={highlightedIndex === index ? { ...highlightedItemStyle, ...listItemStyle } : { ...listItemStyle }}
-          onClick={() => onMouseClick(matchingItem.originalIndex, itemsRef.current[index]!, matchingItem.value)}
           onMouseEnter={() => setHighlightedIndex(index)}
+          onClick={
+            () => {
+              if (matchingItem.originalIndex > 0) {
+                onMouseClick(matchingItem.originalIndex, itemsRef.current[index]!, matchingItem.value)
+              }
+            }
+          }
         >
           {matchingItem.value}
         </div>
@@ -395,7 +411,7 @@ export default function AutoComplete<T>({
         {...inputProps}
         onChange={handlePrefix}
         onKeyDown={handleKeyDown}
-        onFocus={() => setOpen(true)}
+        onFocus={handleFocus}
         autoComplete='off'
       />
       {dropDownList.length
@@ -429,4 +445,21 @@ export default function AutoComplete<T>({
       }
     }
   }
+
+  function resetOnSubmit(matchingItem: string) {
+    if (inputRef.current) {
+      if (clearOnSubmit) {
+        inputRef.current.value = "";
+      } else {
+        if (!matchingItem) {
+          inputRef.current.value = ""
+        } else {
+          inputRef.current.value = matchingItem;
+          inputRef.current.focus()
+          setOpen(false)
+        }
+      }
+    }
+  }
+
 }

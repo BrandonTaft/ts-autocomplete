@@ -67,7 +67,7 @@ export default class Trie {
 
 
         // returns every word with given prefix
-        this.find = function (value) {
+        this.find = function (value, showNoMatchMessage) {
             let prefix = value.toLowerCase()
             let node = this.root;
             let output = [];
@@ -80,7 +80,19 @@ export default class Trie {
                     node = node.nextLetters[prefix[i].toUpperCase()];
                 } else {
                     // if there are none then return it.
-                    return output;
+                    if (showNoMatchMessage) {
+                        if (typeof showNoMatchMessage === 'boolean') {
+                            return (
+                                [{ value: "No matches found", originalIndex: -1 }]
+                            )
+                        } else if (typeof showNoMatchMessage === 'string') {
+                            return (
+                                [{ value: showNoMatchMessage, originalIndex: 0 }]
+                            )
+                        }
+                    } else {
+                        return output
+                    }
                 }
             }
             // find all words in the node that match

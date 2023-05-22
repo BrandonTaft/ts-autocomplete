@@ -11,7 +11,7 @@
       { firstName: 'Thomas', lastName: 'Thomason' }
     ]}
     getPropValue={(list) => {
-      list.map((listItem) => listItem.id)
+      return list.map((listItem) => listItem.id)
     }}
     handleHighlightedItem={(highlightedItem) => {
       console.log(highlightedItem)
@@ -25,6 +25,7 @@
     inputProps={{
       placeholder: "search..."
     }}
+    showNoMatchMessage={"Please try again"}
   />
 ```
 
@@ -67,13 +68,19 @@ npm install --save react-autocomplete-input-component
 - If it is not passed in, the `onSelect` function will run
 - The input value is its only Argument
 
-### `inputProps: Object` (Optional)
+### `inputProps: object` (Optional)
 - Sets HTML text input attributes with some exceptions
 - Type and Autocomplete are unable to be overridden
 - Some Event handlers can be used
 - onClick, onChange, onKeyDown, onFocus cannot be overridden
 
-### `isOpen : Boolean` (Optional)
+### `showNoMatchMessage : boolean | string` (Optional)
+- Used to enable and/or set the message displayed when there are no matches for the text entered.
+- Default is set to `true` and will display a default message - `No matches found`
+- Create a custom message by passing any string into the `showNoMatchMessage` prop
+- `false` will show nothing if there are no matches
+
+### `isOpen : boolean` (Optional)
 - This prop is used to control the position of the dropdown
 - Can be used to add to the default logic or override it by setting `disableOutsideClick` to `true`
 - Use with `updateIsOpen` to completely control the dropdown
@@ -127,14 +134,14 @@ npm install --save react-autocomplete-input-component
 ### `submit : Boolean` (Optional)
 - Only used if you want to use the built-in `SUBMIT` button
 - Each time it is updated to `true` the `handleSubmit` function runs
-- Should be used with `updateSubmit` to update the state in the parent back to `false`
+- Use with `updateSubmit` to update the state in the parent back to `false`
 
 ### `updateSubmit: Function` (Optional)
 - Pass in the set function for your state used in the `submit` prop and it sets the state back to `false` after the `handleSubmit` function runs
 
 ### `handleSubmit: Function` (Optional)
 - Function that runs when the `submit` prop is updated to `true`
-- The omly argument is the original string or object of the value selected
+- The only argument is the original string or object of the value selected
 - If there is not a matching item and `handleNewValue` is not passed in, only the text input value is passed in as an argument
 - If `handleNewValue` is passed in, it will always run if the input value is not in the `list`
 
@@ -144,6 +151,11 @@ npm install --save react-autocomplete-input-component
   const toggleSubmit = (() => {
     setSubmit(true)
   })
+
+  ### `clearOnSubmit: Boolean` (Optional)
+- `true` (default) the input will clear when an item is selected
+- `false` value selected will become the input value
+- `onMouseDown` can be used in `inputProps` to clear the input
 
   return(
     <>
