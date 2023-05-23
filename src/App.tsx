@@ -78,7 +78,7 @@ function App() {
           console.log("HANDLE SUBMIT")
           console.log(selectedItem)
         }}
-        showAll={true}
+        //showAll={true}
         descending={sort}
         highlightFirstItem={false}
         inputProps={{
@@ -111,8 +111,8 @@ function App() {
         updateSubmit={setSubmit}
         //showNoMatchMessage={"Fuck You"}
         //disableOutsideClick={true}
-        // updateIsOpen={setOpenDropDown}
-        // isOpen={openDropDown}
+        updateIsOpen={setOpenDropDown}
+        isOpen={openDropDown}
       />
     </div>
   );

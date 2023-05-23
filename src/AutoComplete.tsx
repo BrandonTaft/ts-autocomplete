@@ -106,7 +106,7 @@ export default function AutoComplete<T>({
   // Create the `filteredItems` array with specified words to go into the trie
   // If `list` contains objects - use getPropvalueRef to map out desired words  
   useEffect(() => {
-    if (Array.isArray(savedList)) {
+      try{
       if (savedList.some(value => { return typeof value == "object" })) {
         if (getPropValueRef.current) {
           try {
@@ -121,12 +121,10 @@ export default function AutoComplete<T>({
       } else {
         setFilteredItems(savedList)
       }
-    } else if (savedList === undefined) {
-      return
-    } else {
-      console.error(`Ivalid PropType : The prop 'list' has a value of '${typeof savedList}' - list must be an array`)
-      return
-    };
+    } catch (error){
+      console.error(`Ivalid PropType : The prop 'list' has a value of '${typeof savedList}' - list must be an array`, '\n', error)
+       return
+    }
   }, [savedList, savedFunction])
 
   //Insert the items in `filteredItems` into the trie
@@ -145,7 +143,7 @@ export default function AutoComplete<T>({
     };
   }, [filteredItems])
 
-  // When dropdown is opened - sets the items to be displayed
+  // When dropdown is opened - finds the matching items to be displayed
   // When dropdown is closed - resets the matching items and highlighted index
   useEffect(() => {
     console.log("run")
@@ -158,8 +156,7 @@ export default function AutoComplete<T>({
           setMatchingItems(filteredItems.map((item, index) => ({ value: item, originalIndex: index })))
         }
         else if (!inputRef.current?.value && !showAll) {
-          setMatchingItems([])
-          setHighlightedIndex(highlightFirstItem === false ? -1 : 0)
+          console.log("IRAN")
           setOpen(false);
         }
       }
@@ -171,7 +168,7 @@ export default function AutoComplete<T>({
 
   // Optionally control logic of dropdown by passing in desired state of open to `isOpen`
   useEffect(() => {
-    if (isOpen !== undefined && (inputRef.current?.value || showAll)) {
+    if (isOpen !== undefined) {
       setOpen(isOpen)
     }
   }, [isOpen, showAll])
@@ -213,7 +210,7 @@ export default function AutoComplete<T>({
   // Text input onChange sets value to prefix state and opens dropdown
   const handlePrefix = ({ target }: ChangeEvent<HTMLInputElement>) => {
     setPrefix(target.value)
-    if (target.value) {
+    if (target.value && !open) {
       setOpen(true)
     }
   };
